@@ -1,0 +1,49 @@
+/* Demands Section Container */
+.demands-section {
+    background-color: #fff9f9; /* Soft red tint */
+    border: 1px solid #f5c6c6;
+    border-left: 5px solid #d32f2f; /* CPI Red accent */
+    border-radius: 8px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+/* Header Styling */
+.demands-section h3 {
+    color: #d32f2f; /* CPI Red */
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 22px;
+    border-bottom: 1px solid #f5c6c6;
+    padding-bottom: 10px;
+}
+
+/* List Styling */
+.demands-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.demands-list li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 16px;
+    color: #333;
+    line-height: 1.4;
+}
+
+.demands-list li:last-child {
+    margin-bottom: 0;
+}
+
+/* SVG Vector Icon Styling */
+.demands-list li svg {
+    width: 24px;
+    height: 24px;
+    margin-right: 15px;
+    fill: #d32f2f; /* Matches the theme color */
+    flex-shrink: 0; /* Prevents the icon from squishing on small screens */
+}
