@@ -23,7 +23,7 @@
             display: block;
         }
         
-        /* Optional: A back button floating at the top left to return to the main site */
+        /* A back button floating at the top left to return to the main site */
         .back-btn {
             position: absolute;
             top: 15px;
@@ -36,33 +36,86 @@
             font-family: Arial, sans-serif;
             font-weight: bold;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
         }
+        
         .back-btn:hover {
             background-color: #b71c1c;
+        }
+
+        /* Footer styles */
+        .simple-footer {
+            text-align: center;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #666;
+            border-top: 1px solid #eee;
+            margin-top: 40px;
+        }
+
+        /* --- Loader Styles --- */
+        #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff; 
+            display: flex;
+            justify-content: center; 
+            align-items: center;
+            z-index: 9999; /* Ensures it stays on top of everything */
+            transition: opacity 0.5s ease;
+        }
+
+        /* Spinner animation */
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3; /* Light grey track */
+            border-top: 5px solid #b30000; /* Deep red */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Rotation keyframes */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
 
-    <!-- Optional: Link to go back to your main page -->
+    <!-- Loader HTML Overlay -->
+    <div id="page-loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Link to go back to your main page -->
     <a href="index.html" class="back-btn">Back to Home</a>
 
-    <!-- REPLACE THE LINK BELOW WITH YOUR ACTUAL FORM/SCRIPT URL -->
+    <!-- Iframe embedding the form -->
     <iframe class="full-screen-iframe" src="https://script.google.com/macros/s/AKfycbxwv0blZjkznV63dTAsYdAtVdOMsFsaBJC6qNEL9TjwJnZFUYnnkmCAKHTsSnD49CBb/exec"></iframe>
-<style>
-    .simple-footer {
-        text-align: center;
-        padding: 20px;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
-        color: #666;
-        border-top: 1px solid #eee;
-        margin-top: 40px;
-    }
-</style>
 
-<footer class="simple-footer">
-    <p>&copy; 2026 CPI Sakthikulangra south LC Media Cell. All rights reserved.</p>
-</footer>
+    <footer class="simple-footer">
+        <p>&copy; 2026 CPI Sakthikulangra south LC Media Cell. All rights reserved.</p>
+    </footer>
+
+    <!-- Loader Script -->
+    <script>
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('page-loader');
+            
+            // Fade out effect
+            loader.style.opacity = '0';
+            
+            // Wait for the CSS transition to finish before hiding completely
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 500); 
+        });
+    </script>
 </body>
 </html>
