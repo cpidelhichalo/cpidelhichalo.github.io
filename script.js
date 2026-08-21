@@ -4,6 +4,9 @@ const downloadBtn = document.getElementById('download');
 const canvas = document.getElementById('canvas');
 const statusText = document.getElementById('status');
 const ctx = canvas.getContext('2d');
+const zoomRange = document.getElementById('zoomRange');
+const rotateRange = document.getElementById('rotateRange');
+const resetBtn = document.getElementById('resetTransform');
 
 const frameSources = {
     classic: 'images/delhi.png',
@@ -26,28 +29,60 @@ const sampleImages = {
 let userImage = new Image();
 let frameImage = new Image();
 let hasPhoto = false;
+let frameLoaded = false;
+let frameFailed = false;
+
+// Transform state (scale is relative to a base-fit scale)
+const transform = {
+    x: 0,
+    y: 0,
+    scale: 1,
+    rotation: 0
+};
+
+let isPointerDown = false;
+let lastPointer = { x: 0, y: 0 };
 
 function renderImage() {
-    if (!hasPhoto || !frameImage.complete || !userImage.complete) {
+    if (!hasPhoto || !userImage.complete) {
+        canvas.style.display = 'none';
+        downloadBtn.disabled = true;
         return;
     }
 
-    const frameWidth = frameImage.naturalWidth || 1200;
-    const frameHeight = frameImage.naturalHeight || 1200;
+    // Choose canvas resolution: prefer frame native size, otherwise fall back to square export
+    const defaultSize = 1200;
+    const frameWidth = (frameLoaded && frameImage.naturalWidth) ? frameImage.naturalWidth : defaultSize;
+    const frameHeight = (frameLoaded && frameImage.naturalHeight) ? frameImage.naturalHeight : defaultSize;
 
+    // Set canvas to desired export resolution
     canvas.width = frameWidth;
     canvas.height = frameHeight;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const scale = Math.max(canvas.width / userImage.width, canvas.height / userImage.height);
-    const drawWidth = userImage.width * scale;
-    const drawHeight = userImage.height * scale;
-    const x = (canvas.width - drawWidth) / 2;
-    const y = (canvas.height - drawHeight) / 2;
+    // Base scale to fill the frame
+    const baseScale = Math.max(canvas.width / userImage.width, canvas.height / userImage.height);
+    const finalScale = baseScale * transform.scale;
 
-    ctx.drawImage(userImage, x, y, drawWidth, drawHeight);
-    ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    ctx.save();
+    // Move origin to canvas center plus pan offsets
+    ctx.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
+    ctx.rotate((transform.rotation || 0) * Math.PI / 180);
+    ctx.scale(finalScale, finalScale);
+    // Draw the user image centered at origin
+    ctx.drawImage(userImage, -userImage.width / 2, -userImage.height / 2);
+    ctx.restore();
+
+    // Draw frame on top if available
+    if (frameLoaded) {
+        ctx.drawImage(frameImage, 0, 0, canvas.width, canvas.height);
+    } else if (frameFailed) {
+        // subtle border when frame is missing
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth = Math.max(4, Math.round(canvas.width * 0.008));
+        ctx.strokeRect(0.5 * ctx.lineWidth, 0.5 * ctx.lineWidth, canvas.width - ctx.lineWidth, canvas.height - ctx.lineWidth);
+    }
 
     canvas.style.display = 'block';
     downloadBtn.disabled = false;
@@ -55,9 +90,19 @@ function renderImage() {
 }
 
 function loadFrame(frameKey) {
-    frameImage.onload = renderImage;
+    frameLoaded = false;
+    frameFailed = false;
+    frameImage.onload = () => {
+        frameLoaded = true;
+        frameFailed = false;
+        renderImage();
+    };
     frameImage.onerror = () => {
-        statusText.textContent = 'The selected frame could not be loaded.';
+        frameLoaded = false;
+        frameFailed = true;
+        statusText.textContent = 'The selected frame could not be loaded — previewing without frame.';
+        // still attempt to render the user image
+        renderImage();
     };
     frameImage.src = frameSources[frameKey];
 }
@@ -79,11 +124,10 @@ function renderSamples(frameKey) {
         img.style.cursor = 'pointer';
         img.style.border = '2px solid transparent';
         img.addEventListener('click', () => {
-            // mark selection
             Array.from(container.children).forEach(c => c.style.border = '2px solid transparent');
             img.style.border = '2px solid #2563eb';
-            // load the chosen sample into the canvas as the user image
             hasPhoto = true;
+            resetTransforms();
             userImage.onload = renderImage;
             userImage.onerror = () => {
                 statusText.textContent = 'The selected photo could not be loaded.';
@@ -93,11 +137,19 @@ function renderSamples(frameKey) {
         });
         container.appendChild(img);
     });
-    // Auto-select the first sample only if the user hasn't uploaded a photo yet
     if (!hasPhoto && list.length > 0) {
         const first = container.querySelector('.sample-thumb');
         if (first) first.click();
     }
+}
+
+function resetTransforms() {
+    transform.x = 0;
+    transform.y = 0;
+    transform.scale = 1;
+    transform.rotation = 0;
+    if (zoomRange) zoomRange.value = '1';
+    if (rotateRange) rotateRange.value = '0';
 }
 
 uploadInput.addEventListener('change', (event) => {
@@ -106,12 +158,13 @@ uploadInput.addEventListener('change', (event) => {
 
     const reader = new FileReader();
     reader.onload = (fileEvent) => {
+        hasPhoto = true;
+        resetTransforms();
         userImage.onload = renderImage;
         userImage.onerror = () => {
             statusText.textContent = 'The selected photo could not be loaded.';
         };
         userImage.src = fileEvent.target.result;
-        hasPhoto = true;
     };
     reader.readAsDataURL(file);
     statusText.textContent = 'Preparing your photo...';
@@ -121,6 +174,73 @@ frameSelect.addEventListener('change', (event) => {
     loadFrame(event.target.value);
     renderSamples(event.target.value);
 });
+
+// Pointer dragging for pan
+canvas.addEventListener('pointerdown', (e) => {
+    if (!hasPhoto) return;
+    isPointerDown = true;
+    lastPointer.x = e.clientX;
+    lastPointer.y = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => {
+    if (!isPointerDown) return;
+    const dx = e.clientX - lastPointer.x;
+    const dy = e.clientY - lastPointer.y;
+    // Adjust pan based on physical pixels; when canvas is high-res, smaller moves are needed visually
+    transform.x += dx;
+    transform.y += dy;
+    lastPointer.x = e.clientX;
+    lastPointer.y = e.clientY;
+    renderImage();
+});
+['pointerup', 'pointercancel', 'pointerout', 'pointerleave'].forEach(ev => {
+    canvas.addEventListener(ev, (e) => {
+        if (isPointerDown) {
+            isPointerDown = false;
+            try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+        }
+    });
+});
+
+// Wheel to zoom
+canvas.addEventListener('wheel', (e) => {
+    if (!hasPhoto) return;
+    e.preventDefault();
+    const delta = -e.deltaY;
+    const zoomFactor = delta > 0 ? 1.06 : 0.94;
+    // Zoom around cursor: translate so cursor remains at same image point
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width / 2 - transform.x;
+    const cy = e.clientY - rect.top - rect.height / 2 - transform.y;
+    transform.scale *= zoomFactor;
+    // adjust pan to keep point under cursor stable
+    transform.x -= cx * (zoomFactor - 1);
+    transform.y -= cy * (zoomFactor - 1);
+    if (zoomRange) zoomRange.value = String(transform.scale);
+    renderImage();
+}, { passive: false });
+
+if (zoomRange) {
+    zoomRange.addEventListener('input', (e) => {
+        transform.scale = parseFloat(e.target.value) || 1;
+        renderImage();
+    });
+}
+
+if (rotateRange) {
+    rotateRange.addEventListener('input', (e) => {
+        transform.rotation = parseFloat(e.target.value) || 0;
+        renderImage();
+    });
+}
+
+if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+        resetTransforms();
+        renderImage();
+    });
+}
 
 downloadBtn.addEventListener('click', () => {
     const link = document.createElement('a');
