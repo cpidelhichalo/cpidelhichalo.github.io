@@ -506,6 +506,11 @@
     box-shadow: 0 8px 16px rgba(185, 28, 28, 0.3);
 }
 
+/* Hide the Become a Member UI element (kept in markup) */
+.membership-btn {
+    display: none !important;
+}
+
 /* Center the button on mobile screens */
 @media (max-width: 640px) {
     .top-nav {
@@ -768,8 +773,16 @@
                 <option value="classic">Malayalam frame</option>
                 <option value="modern">English frame</option>
             </select>
-<button id="download" type="button" disabled>Download image</button>
-            
+
+            <label for="zoomRange">Zoom</label>
+            <input id="zoomRange" type="range" min="0.2" max="3" step="0.01" value="1">
+
+            <label for="rotateRange">Rotate</label>
+            <input id="rotateRange" type="range" min="-180" max="180" step="1" value="0">
+
+            <button id="resetTransform" type="button">Reset</button>
+
+            <button id="download" type="button" disabled>Download image</button>
         </div>
 
             <!-- Sample images that change with frame style -->
@@ -920,7 +933,7 @@
                 <a href="https://www.facebook.com/communistpartyofindia" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
                     <svg viewBox="0 0 24 24"><path d="M13.5 22v-9h3l.45-3.5H13.5V4.4c0-1.01.3-1.7 1.8-1.7h1.9V.1c-.33-.04-1.45-.14-2.75-.14-2.72 0-4.58 1.66-4.58 4.7V9.5H6v3.5h3.87V22h3.63Z"/></svg>
                 </a>
-                <a href="https://www.instagram.com/cpi.kerala" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <a href="https://www.instagram.com/cpiofindia" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
                     <svg viewBox="0 0 24 24"><path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7Zm5 3.25A3.75 3.75 0 1 1 8.25 12 3.75 3.75 0 0 1 12 8.25Zm0 2A1.75 1.75 0 1 0 13.75 12 1.75 1.75 0 0 0 12 10.25Zm4.5-3.75a.9.9 0 1 1-.9.9.9.9 0 0 1 .9-.9Z"/></svg>
                 </a>
                 <a href="https://x.com/CPI_National" target="_blank" rel="noopener noreferrer" aria-label="X">
@@ -935,17 +948,21 @@
     <style>
     .simple-footer {
         text-align: center;
-        padding: 20px;
+        padding: 18px 14px;
         font-family: Arial, sans-serif;
-        font-size: 14px;
-        color: #666;
-        border-top: 1px solid #eee;
-        margin-top: 40px;
+        font-size: 15px;
+        color: #fff;
+        background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%);
+        border-top: 1px solid rgba(255,255,255,0.06);
+        margin-top: 28px;
+        line-height: 1.4;
+        border-radius: 12px;
+        box-shadow: 0 10px 24px rgba(185,28,28,0.16);
     }
 </style>
-
 <footer class="simple-footer">
-    <p>&copy; 2026 CPI Sakthikulangra south LC Media Cell. All rights reserved.</p>
+    <p style="margin:0; font-weight:800; letter-spacing:0.4px;">© 2026 CPI Sakthikulangra South LC Media Cell</p>
+    <p style="margin:6px 0 0 0; font-size:13px; color:rgba(255,255,255,0.92);">All rights reserved. For queries contact: cpidelhichalo@gmail.com</p>
 </footer>
 </body>
 </html>
