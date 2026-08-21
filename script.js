@@ -291,10 +291,31 @@ if (resetBtn) {
 }
 
 downloadBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'my-framed-photo.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    if (!hasPhoto) return;
+
+    downloadBtn.disabled = true;
+    canvas.toBlob((blob) => {
+        downloadBtn.disabled = false;
+
+        if (!blob) {
+            statusText.textContent = 'Could not prepare the image for download.';
+            return;
+        }
+
+        const imageUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = 'my-framed-photo.png';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        // Some mobile browsers open the image instead of honoring download.
+        window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000);
+        statusText.textContent = 'Your framed image is ready. If it opened in a new tab, save it from there.';
+    }, 'image/png');
 });
 
 loadFrame(frameSelect.value);
