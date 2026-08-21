@@ -1,6 +1,7 @@
 const uploadInput = document.getElementById('upload');
 const frameSelect = document.getElementById('frameSelect');
 const downloadBtn = document.getElementById('download');
+const downloadCountText = document.getElementById('downloadCount');
 const canvas = document.getElementById('canvas');
 const statusText = document.getElementById('status');
 const ctx = canvas.getContext('2d');
@@ -31,6 +32,51 @@ let frameImage = new Image();
 let hasPhoto = false;
 let frameLoaded = false;
 let frameFailed = false;
+
+const supabaseUrl = 'https://frgvxkjswimnebxvbhqy.supabase.co';
+const supabaseKey = 'sb_publishable_ZOEw1s8c8OM7AiOubhDlOg_9HzZyprZ';
+const supabaseHeaders = {
+    apikey: supabaseKey,
+    Authorization: `Bearer ${supabaseKey}`
+};
+
+function setDownloadCount(count) {
+    if (!downloadCountText) return;
+    downloadCountText.textContent = Number.isFinite(count) && count >= 0 ? String(count) : '0';
+}
+
+async function loadDownloadCount() {
+    try {
+        const response = await fetch(
+            `${supabaseUrl}/rest/v1/download_stats?id=eq.1&select=count`,
+            { headers: supabaseHeaders }
+        );
+        if (!response.ok) throw new Error('Unable to load download count');
+        const data = await response.json();
+        setDownloadCount(data[0]?.count);
+    } catch (error) {
+        setDownloadCount(0);
+    }
+}
+
+async function recordDownload() {
+    try {
+        const response = await fetch(
+            `${supabaseUrl}/rest/v1/rpc/increment_downloads`,
+            {
+                method: 'POST',
+                headers: {
+                    ...supabaseHeaders,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        if (!response.ok) throw new Error('Unable to record download');
+        setDownloadCount(await response.json());
+    } catch (error) {
+        statusText.textContent = 'Image downloaded, but the shared count could not be updated.';
+    }
+}
 
 // Transform state (scale is relative to a base-fit scale)
 const transform = {
@@ -311,6 +357,7 @@ downloadBtn.addEventListener('click', () => {
         document.body.appendChild(link);
         link.click();
         link.remove();
+        recordDownload();
 
         // Some mobile browsers open the image instead of honoring download.
         window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000);
@@ -320,3 +367,4 @@ downloadBtn.addEventListener('click', () => {
 
 loadFrame(frameSelect.value);
 renderSamples(frameSelect.value);
+loadDownloadCount();
