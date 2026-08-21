@@ -42,6 +42,11 @@ const transform = {
 
 let isPointerDown = false;
 let lastPointer = { x: 0, y: 0 };
+const pointers = new Map();
+let initialDistance = null;
+let initialAngle = null;
+let initialScale = null;
+let initialRotation = null;
 
 function renderImage() {
     if (!hasPhoto || !userImage.complete) {
@@ -178,28 +183,71 @@ frameSelect.addEventListener('change', (event) => {
 // Pointer dragging for pan
 canvas.addEventListener('pointerdown', (e) => {
     if (!hasPhoto) return;
-    isPointerDown = true;
-    lastPointer.x = e.clientX;
-    lastPointer.y = e.clientY;
+    // track active pointers
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     canvas.setPointerCapture(e.pointerId);
+    if (pointers.size === 1) {
+        isPointerDown = true;
+        const p = pointers.values().next().value;
+        lastPointer.x = p.x;
+        lastPointer.y = p.y;
+    } else if (pointers.size === 2) {
+        // initialize pinch/rotate
+        const pts = Array.from(pointers.values());
+        initialDistance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        initialAngle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) * 180 / Math.PI;
+        initialScale = transform.scale;
+        initialRotation = transform.rotation;
+    }
 });
+
 canvas.addEventListener('pointermove', (e) => {
-    if (!isPointerDown) return;
-    const dx = e.clientX - lastPointer.x;
-    const dy = e.clientY - lastPointer.y;
-    // Adjust pan based on physical pixels; when canvas is high-res, smaller moves are needed visually
-    transform.x += dx;
-    transform.y += dy;
-    lastPointer.x = e.clientX;
-    lastPointer.y = e.clientY;
-    renderImage();
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1 && isPointerDown) {
+        const p = pointers.values().next().value;
+        const dx = p.x - lastPointer.x;
+        const dy = p.y - lastPointer.y;
+        transform.x += dx;
+        transform.y += dy;
+        lastPointer.x = p.x;
+        lastPointer.y = p.y;
+        renderImage();
+    } else if (pointers.size === 2) {
+        const pts = Array.from(pointers.values());
+        const currDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        const currAngle = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) * 180 / Math.PI;
+        if (initialDistance && initialScale != null) {
+            const scaleFactor = currDist / initialDistance;
+            transform.scale = initialScale * scaleFactor;
+            if (zoomRange) zoomRange.value = String(transform.scale);
+        }
+        if (initialAngle != null && initialRotation != null) {
+            const angleDelta = currAngle - initialAngle;
+            transform.rotation = initialRotation + angleDelta;
+            if (rotateRange) rotateRange.value = String(transform.rotation);
+        }
+        renderImage();
+    }
 });
+
 ['pointerup', 'pointercancel', 'pointerout', 'pointerleave'].forEach(ev => {
     canvas.addEventListener(ev, (e) => {
-        if (isPointerDown) {
+        // remove pointer tracking
+        if (pointers.has(e.pointerId)) pointers.delete(e.pointerId);
+        if (pointers.size === 0) {
             isPointerDown = false;
-            try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+            initialDistance = null;
+            initialAngle = null;
+            initialScale = null;
+            initialRotation = null;
+        } else if (pointers.size === 1) {
+            // switch back to single-pointer pan
+            const p = pointers.values().next().value;
+            lastPointer.x = p.x;
+            lastPointer.y = p.y;
         }
+        try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
     });
 });
 
